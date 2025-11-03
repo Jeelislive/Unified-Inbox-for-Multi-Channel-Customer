@@ -1,4 +1,4 @@
-import { getCurrentUser } from "@/lib/auth-utils";
+import { getCurrentUser } from "@/lib/authUtils";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 

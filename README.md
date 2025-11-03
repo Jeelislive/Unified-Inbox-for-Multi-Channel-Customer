@@ -225,3 +225,11 @@ MIT License
 ## 👥 Contributing
 
 This project follows a structured 10-phase development approach. Each phase is a complete, functional unit with its own commit.
+
+You can test the application with these demo accounts (password: `demo123`):
+
+- **Admin**: admin@acme.com
+- **Editor**: editor@acme.com
+- **Viewer**: viewer@acme.com
+
+---

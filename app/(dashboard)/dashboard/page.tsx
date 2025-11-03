@@ -1,5 +1,6 @@
-import { getCurrentUser } from "@/lib/auth-utils";
+import { getCurrentUser } from "@/lib/authUtils";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import LogoutButton from "@/components/LogoutButton";
 
 /**
@@ -18,10 +19,24 @@ export default async function DashboardPage() {
       <nav className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
-            <div className="flex items-center">
+            <div className="flex items-center gap-8">
               <h1 className="text-xl font-bold text-gray-900">
                 Unified Inbox CRM
               </h1>
+              <div className="flex gap-4">
+                <Link
+                  href="/dashboard"
+                  className="text-sm font-medium text-gray-700 hover:text-gray-900"
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  href="/inbox"
+                  className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                >
+                  Inbox
+                </Link>
+              </div>
             </div>
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-700">
@@ -96,6 +111,15 @@ export default async function DashboardPage() {
                     {user.team?.name || "No team assigned"}
                   </p>
                 </div>
+              </div>
+
+              <div className="mt-6">
+                <Link
+                  href="/inbox"
+                  className="block w-full px-6 py-3 bg-blue-600 text-white text-center font-semibold rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  Open Inbox →
+                </Link>
               </div>
 
               <div className="mt-6 p-4 bg-blue-50 rounded-md">
