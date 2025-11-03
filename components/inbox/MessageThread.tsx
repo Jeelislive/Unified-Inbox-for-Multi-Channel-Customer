@@ -27,6 +27,9 @@ export default function MessageThread({
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [selectedChannel, setSelectedChannel] = useState<"SMS" | "WHATSAPP">(
+    "SMS"
+  );
 
   // Fetch messages for the selected contact
   useEffect(() => {
@@ -57,7 +60,7 @@ export default function MessageThread({
         body: JSON.stringify({
           contactId: contact.id,
           content: newMessage,
-          channel: "SMS", // Default for Phase 4
+          channel: selectedChannel,
         }),
       });
 
@@ -65,9 +68,13 @@ export default function MessageThread({
         const message = await res.json();
         setMessages([...messages, message]);
         setNewMessage("");
+      } else {
+        const error = await res.json();
+        alert(error.error || "Failed to send message");
       }
     } catch (error) {
       console.error("Failed to send message:", error);
+      alert("Failed to send message. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -186,12 +193,41 @@ export default function MessageThread({
 
       {/* Input */}
       <div className="border-t border-gray-200 p-4 bg-white">
+        {/* Channel Selector */}
+        <div className="flex gap-2 mb-2">
+          <button
+            type="button"
+            onClick={() => setSelectedChannel("SMS")}
+            className={cn(
+              "px-3 py-1 text-sm rounded-md transition-colors",
+              selectedChannel === "SMS"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            )}
+          >
+            📱 SMS
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedChannel("WHATSAPP")}
+            className={cn(
+              "px-3 py-1 text-sm rounded-md transition-colors",
+              selectedChannel === "WHATSAPP"
+                ? "bg-green-600 text-white"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            )}
+          >
+            💚 WhatsApp
+          </button>
+        </div>
+
+        {/* Message Input */}
         <form onSubmit={handleSendMessage} className="flex gap-2">
           <input
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Type a message..."
+            placeholder={`Type a ${selectedChannel} message...`}
             className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             disabled={loading}
           />

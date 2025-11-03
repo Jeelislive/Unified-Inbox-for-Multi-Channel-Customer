@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/authUtils";
 import { ChannelType, MessageDirection, MessageStatus } from "@prisma/client";
+import { sendSMS, sendWhatsApp } from "@/lib/twilio";
 
 /**
  * GET /api/messages - Fetch messages for a contact
@@ -106,13 +107,54 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Send via Twilio based on channel
+    try {
+      const recipient =
+        channel === ChannelType.WHATSAPP
+          ? contact.whatsappNumber || contact.phoneNumber
+          : contact.phoneNumber;
+
+      if (!recipient) {
+        throw new Error("No phone number available for this contact");
+      }
+
+      if (channel === ChannelType.SMS) {
+        await sendSMS({
+          teamId: user.teamId!,
+          to: recipient,
+          content,
+          messageId: message.id,
+        });
+      } else if (channel === ChannelType.WHATSAPP) {
+        await sendWhatsApp({
+          teamId: user.teamId!,
+          to: recipient,
+          content,
+          messageId: message.id,
+        });
+      }
+    } catch (twilioError) {
+      console.error("Twilio send error:", twilioError);
+      // Message already marked as FAILED in twilio.ts
+    }
+
     // Update contact's lastContactedAt
     await prisma.contact.update({
       where: { id: contactId },
       data: { lastContactedAt: new Date() },
     });
 
-    return NextResponse.json(message, { status: 201 });
+    // Fetch updated message with status
+    const updatedMessage = await prisma.message.findUnique({
+      where: { id: message.id },
+      include: {
+        user: {
+          select: { name: true, email: true },
+        },
+      },
+    });
+
+    return NextResponse.json(updatedMessage, { status: 201 });
   } catch (error) {
     console.error("POST /api/messages error:", error);
     return NextResponse.json(
