@@ -7,6 +7,7 @@ import {
   ContactTag,
   NoteVisibility,
 } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
@@ -28,6 +29,9 @@ async function main() {
   });
   console.log("✓ Created team:", team.name);
 
+  // Hash demo password
+  const demoPassword = await bcrypt.hash("demo123", 10);
+
   // Create demo users
   const adminUser = await prisma.user.upsert({
     where: { email: "admin@acme.com" },
@@ -37,7 +41,7 @@ async function main() {
       name: "Admin User",
       role: Role.ADMIN,
       teamId: team.id,
-      password: "$2a$10$demoHashedPassword", // In production, use proper hashing
+      password: demoPassword,
     },
   });
 
@@ -49,7 +53,7 @@ async function main() {
       name: "Editor User",
       role: Role.EDITOR,
       teamId: team.id,
-      password: "$2a$10$demoHashedPassword",
+      password: demoPassword,
     },
   });
 
@@ -61,7 +65,7 @@ async function main() {
       name: "Viewer User",
       role: Role.VIEWER,
       teamId: team.id,
-      password: "$2a$10$demoHashedPassword",
+      password: demoPassword,
     },
   });
   console.log("✓ Created users: Admin, Editor, Viewer");
@@ -219,7 +223,7 @@ async function main() {
   console.log("✓ Created 3 demo notes");
 
   console.log("\n✅ Database seeded successfully!");
-  console.log("\n📊 Demo accounts:");
+  console.log("\n📊 Demo accounts (password: demo123):");
   console.log("  Admin:  admin@acme.com");
   console.log("  Editor: editor@acme.com");
   console.log("  Viewer: viewer@acme.com");
