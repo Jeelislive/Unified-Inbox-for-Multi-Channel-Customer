@@ -1,5 +1,5 @@
-// This is your Prisma schema file
-// Phase 1: Basic setup - full schema will be added in Phase 2
+// Unified Inbox CRM - Complete Database Schema
+// Phase 2: Full data model with relationships
 
 generator client {
   provider = "prisma-client-js"
@@ -10,11 +10,247 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Placeholder model - full schema in Phase 2
+// ============================================
+// ENUMS
+// ============================================
+
+enum Role {
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+enum ChannelType {
+  SMS
+  WHATSAPP
+  EMAIL
+  TWITTER
+  FACEBOOK
+  INSTAGRAM
+}
+
+enum MessageStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+  SCHEDULED
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum ContactTag {
+  LEAD
+  CLIENT
+  VIP
+  SUPPORT
+  SALES
+  ARCHIVED
+}
+
+enum NoteVisibility {
+  PUBLIC
+  PRIVATE
+  TEAM
+}
+
+// ============================================
+// CORE MODELS
+// ============================================
+
+/// User account with role-based access
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String?   // Hashed password for credentials auth
+  role          Role      @default(VIEWER)
+  avatar        String?
+  
+  // OAuth fields
+  googleId      String?   @unique
+  
+  // Team relationships
+  teamId        String?
+  team          Team?     @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  
+  // Activity tracking
+  messages      Message[]
+  notes         Note[]
+  assignedContacts Contact[] @relation("AssignedUser")
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastActiveAt  DateTime  @default(now())
+  
+  @@index([email])
+  @@index([teamId])
+  @@map("users")
+}
+
+/// Team/Organization for multi-tenancy
+model Team {
+  id            String    @id @default(cuid())
+  name          String
+  slug          String    @unique
+  
+  // Twilio configuration
+  twilioAccountSid   String?
+  twilioAuthToken    String?  // Should be encrypted
+  twilioPhoneNumber  String?
+  twilioWhatsappNumber String?
+  
+  // Members and data
+  members       User[]
+  contacts      Contact[]
+  messages      Message[]
+  notes         Note[]
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  @@index([slug])
+  @@map("teams")
+}
+
+/// Unified contact across all channels
+model Contact {
+  id            String      @id @default(cuid())
+  
+  // Identity
+  name          String?
+  email         String?
+  phoneNumber   String?
+  avatar        String?
+  
+  // Channel identifiers
+  whatsappNumber String?
+  twitterHandle  String?
+  facebookId     String?
+  instagramHandle String?
+  
+  // Metadata
+  tags          ContactTag[]
+  customFields  Json?       // Flexible key-value storage
+  
+  // Relationships
+  teamId        String
+  team          Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  
+  assignedUserId String?
+  assignedUser   User?       @relation("AssignedUser", fields: [assignedUserId], references: [id], onDelete: SetNull)
+  
+  messages      Message[]
+  notes         Note[]
+  
+  // Tracking
+  lastContactedAt DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  
+  @@unique([teamId, phoneNumber])
+  @@unique([teamId, email])
+  @@index([teamId])
+  @@index([phoneNumber])
+  @@index([email])
+  @@index([assignedUserId])
+  @@map("contacts")
+}
+
+/// Unified message across all channels
+model Message {
+  id            String          @id @default(cuid())
+  
+  // Message content
+  content       String
+  channel       ChannelType
+  direction     MessageDirection
+  status        MessageStatus   @default(PENDING)
+  
+  // Channel-specific metadata
+  externalId    String?         // ID from provider (Twilio, etc.)
+  metadata      Json?           // Channel-specific data
+  
+  // Media attachments
+  mediaUrls     String[]
+  
+  // Relationships
+  contactId     String
+  contact       Contact         @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  
+  teamId        String
+  team          Team            @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  
+  userId        String?         // User who sent (for outbound)
+  user          User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  // Threading (for email-like conversations)
+  threadId      String?
+  inReplyToId   String?
+  inReplyTo     Message?        @relation("MessageReplies", fields: [inReplyToId], references: [id], onDelete: SetNull)
+  replies       Message[]       @relation("MessageReplies")
+  
+  // Scheduling
+  scheduledFor  DateTime?
+  sentAt        DateTime?
+  deliveredAt   DateTime?
+  readAt        DateTime?
+  
+  // Error tracking
+  errorMessage  String?
+  retryCount    Int             @default(0)
+  
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  
+  @@index([contactId])
+  @@index([teamId])
+  @@index([userId])
+  @@index([channel])
+  @@index([status])
+  @@index([direction])
+  @@index([scheduledFor])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+/// Collaborative notes on contacts
+model Note {
+  id            String          @id @default(cuid())
+  
+  // Content
+  content       String
+  visibility    NoteVisibility  @default(PUBLIC)
+  
+  // Encryption for private notes (Phase 7)
+  encrypted     Boolean         @default(false)
+  
+  // Relationships
+  contactId     String
+  contact       Contact         @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  
+  teamId        String
+  team          Team            @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  
+  authorId      String
+  author        User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  
+  // Collaboration metadata (for Y.js in Phase 7)
+  collaborators String[]        // User IDs
+  mentions      String[]        // User IDs mentioned with @
+  
+  // Pinned notes
+  isPinned      Boolean         @default(false)
+  
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  
+  @@index([contactId])
+  @@index([teamId])
+  @@index([authorId])
+  @@index([visibility])
+  @@map("notes")
 }

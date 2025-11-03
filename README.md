@@ -44,6 +44,110 @@ A modern, full-stack customer relationship management system that unifies commun
 └── ...config files
 ```
 
+## 🗄️ Database Schema (ERD)
+
+The database schema consists of 5 core models with comprehensive relationships:
+
+```mermaid
+erDiagram
+    User ||--o{ Message : sends
+    User ||--o{ Note : authors
+    User ||--o{ Contact : "assigned to"
+    User }o--|| Team : "belongs to"
+
+    Team ||--o{ User : has
+    Team ||--o{ Contact : manages
+    Team ||--o{ Message : owns
+    Team ||--o{ Note : contains
+
+    Contact ||--o{ Message : receives
+    Contact ||--o{ Note : has
+    Contact }o--|| Team : "belongs to"
+    Contact }o--o| User : "assigned to"
+
+    Message }o--|| Contact : "sent to/from"
+    Message }o--|| Team : "belongs to"
+    Message }o--o| User : "sent by"
+    Message ||--o{ Message : replies
+
+    Note }o--|| Contact : about
+    Note }o--|| Team : "belongs to"
+    Note }o--|| User : "created by"
+
+    User {
+        string id PK
+        string email UK
+        string name
+        string password
+        enum role
+        string googleId UK
+        string teamId FK
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    Team {
+        string id PK
+        string name
+        string slug UK
+        string twilioAccountSid
+        string twilioAuthToken
+        string twilioPhoneNumber
+        datetime createdAt
+    }
+
+    Contact {
+        string id PK
+        string name
+        string email
+        string phoneNumber
+        string whatsappNumber
+        enum tags
+        json customFields
+        string teamId FK
+        string assignedUserId FK
+        datetime lastContactedAt
+        datetime createdAt
+    }
+
+    Message {
+        string id PK
+        string content
+        enum channel
+        enum direction
+        enum status
+        string externalId
+        json metadata
+        string contactId FK
+        string teamId FK
+        string userId FK
+        datetime scheduledFor
+        datetime sentAt
+        datetime createdAt
+    }
+
+    Note {
+        string id PK
+        string content
+        enum visibility
+        boolean encrypted
+        string contactId FK
+        string teamId FK
+        string authorId FK
+        boolean isPinned
+        datetime createdAt
+    }
+```
+
+### Key Features:
+
+- **Multi-tenancy** via Team model
+- **Role-based access** (ADMIN, EDITOR, VIEWER)
+- **Unified contacts** across all channels
+- **Message threading** and scheduling support
+- **Collaborative notes** with visibility controls
+- **6 Channel types**: SMS, WhatsApp, Email, Twitter, Facebook, Instagram
+
 ## 🔧 Setup Instructions
 
 ### Prerequisites
@@ -101,6 +205,10 @@ A modern, full-stack customer relationship management system that unifies commun
 - `npm start` - Start production server
 - `npm run lint` - Run ESLint
 - `npm run format` - Format code with Prettier
+- `npm run db:generate` - Generate Prisma client
+- `npm run db:push` - Push schema changes to database
+- `npm run db:seed` - Seed database with demo data
+- `npm run db:studio` - Open Prisma Studio
 
 ## 🔒 Security Best Practices
 
@@ -120,5 +228,44 @@ This project follows a structured 10-phase development approach. Each phase is a
 
 ---
 
-**Current Phase**: Phase 1 ✅  
-**Last Updated**: Phase 1 - Project Setup Complete
+## 🎯 Development Phases
+
+### ✅ Phase 1 - Project Setup & Boilerplate (COMPLETED)
+
+- [x] Next.js 14+ with App Router
+- [x] Tailwind CSS configuration
+- [x] ESLint + Prettier + Husky
+- [x] Prisma with PostgreSQL
+- [x] Base folder structure
+
+### ✅ Phase 2 - Database Schema (COMPLETED)
+
+- [x] Complete Prisma models (User, Team, Contact, Message, Note)
+- [x] Channel type enums (SMS, WhatsApp, Email, Twitter, Facebook, Instagram)
+- [x] Role-based access enums (ADMIN, EDITOR, VIEWER)
+- [x] Database relationships and indexes
+- [x] Mermaid ERD diagram in README
+- [x] Seed file with demo data
+
+### 📅 Phase 3 - Authentication & Role Management (NEXT)
+
+- [ ] Better Auth integration
+- [ ] Credentials + Google OAuth
+- [ ] Role-based access control
+- [ ] Protected routes
+- [ ] Login/Signup pages
+
+### 📅 Upcoming Phases
+
+- **Phase 4**: Unified Inbox UI
+- **Phase 5**: Twilio Integration (SMS/WhatsApp)
+- **Phase 6**: Contact Management & Auto-Merge
+- **Phase 7**: Real-time Collaborative Notes
+- **Phase 8**: Message Scheduling & Automation
+- **Phase 9**: Analytics Dashboard
+- **Phase 10**: Polish & Documentation
+
+---
+
+**Current Phase**: Phase 2 ✅  
+**Last Updated**: Phase 2 - Database Schema Complete
